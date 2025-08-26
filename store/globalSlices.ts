@@ -1,14 +1,13 @@
-import { createSlice } from "@reduxjs/toolkit";
-import { globalStates } from "./states/globalStates";
-import { globalActions as GlobalAction } from "./actions/globalActions";
+import { createSlice } from '@reduxjs/toolkit'
+import { globalStates as GlobalStates } from './states/globalStates'
+import { globalActions as GlobalActions } from './actions/globalActions'
 
 export const globalSlices = createSlice({
-    name: 'global',
-    initialState: globalStates,
-    reducers: GlobalAction,
-
+  name: 'global',
+  initialState: GlobalStates,
+  reducers: GlobalActions,
 })
 
 
 export const globalActions = globalSlices.actions
-export default globalSlices.reducer;
+export default globalSlices.reducer
