@@ -14,6 +14,7 @@ import { generateEventData, generateTicketData } from '@/utils/fakeData'
 import { useDispatch, useSelector } from 'react-redux'
 import { useEffect } from 'react'
 import { globalActions } from '@/store/globalSlices'
+import { getEvent, getTickets } from '@/services/blockchain'
 
 interface ComponentProps {
   eventData: EventStruct
@@ -23,14 +24,14 @@ interface ComponentProps {
 const Page: NextPage<ComponentProps> = ({ eventData, ticketsData }) => {
   const { address } = useAccount()
   const dispatch = useDispatch()
-  const { setEvent, setTickets} = globalActions
+  const { setEvent, setTickets, setTicketModal } = globalActions
+
   const { event, tickets } = useSelector((states: RootState) => states.globalStates)
 
   useEffect(() => {
-      dispatch(setEvent(eventData))
-      dispatch(setTickets(ticketsData))
-    }, [dispatch, setEvent, eventData, setTickets, ticketsData]
-  )
+    dispatch(setEvent(eventData))
+    dispatch(setTickets(ticketsData))
+  }, [dispatch, setEvent, eventData, setTickets, ticketsData])
 
   return event ? (
     <div>
@@ -50,11 +51,10 @@ const Page: NextPage<ComponentProps> = ({ eventData, ticketsData }) => {
           <div className="w-full">
             <div className="flex flex-wrap justify-start items-center space-x-2 mt-4">
               <h3 className="text-gray-900 text-3xl font-bold capitalize ">{event.title}</h3>
-
-              {!event.minted ? (
+              {!event.paidOut ? (
                 <span className="bg-orange-600 text-white rounded-xl px-4">Open</span>
               ) : (
-                <span className="bg-cyan-600 text-white rounded-xl px-4">Minted</span>
+                <span className="bg-cyan-600 text-white rounded-xl px-4">Paid</span>
               )}
             </div>
             <div className="flex justify-start items-center space-x-1 font-medium text-sm">
@@ -95,12 +95,13 @@ const Page: NextPage<ComponentProps> = ({ eventData, ticketsData }) => {
                   className="bg-orange-500 p-2 rounded-full py-3 px-10
                 text-white hover:bg-transparent border hover:text-orange-500
                 hover:border-orange-500 duration-300 transition-all"
+                  onClick={() => dispatch(setTicketModal('scale-100'))}
                 >
                   Buy Ticket
                 </button>
               )}
 
-              {address === event.owner && <EventActions event={event} />}
+              {address === event.owner && !event.paidOut && <EventActions event={event} />}
             </div>
 
             <h4 className="text-xl mt-10 mb-5">Recent Purchase ({tickets.length})</h4>
@@ -165,8 +166,8 @@ export default Page
 
 export const getServerSideProps = async (context: GetServerSidePropsContext) => {
   const { id } = context.query
-  const eventData: EventStruct = generateEventData(Number(id))[0]
-  const ticketsData: TicketStruct[] = generateTicketData(5)
+  const eventData: EventStruct = await getEvent(Number(id))
+  const ticketsData: TicketStruct[] = await getTickets(Number(id))
 
   return {
     props: {

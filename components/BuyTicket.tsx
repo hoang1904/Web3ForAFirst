@@ -1,12 +1,19 @@
-import { EventStruct } from '@/utils/type.dt'
+import { buyTicket } from '@/services/blockchain'
+import { globalActions } from '@/store/globalSlices'
+import { EventStruct, RootState } from '@/utils/type.dt'
 import React, { FormEvent, useState } from 'react'
 import { FaTimes } from 'react-icons/fa'
+import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'react-toastify'
 import { useAccount } from 'wagmi'
 
 const BuyTicket: React.FC<{ event: EventStruct }> = ({ event }) => {
-  const ticketModal = 'scale-0'
+  const { ticketModal } = useSelector((states: RootState) => states.globalStates)
+  const { setTicketModal } = globalActions
+
   const { address } = useAccount()
+  const dispatch = useDispatch()
+
   const [tickets, setTickets] = useState<number | string>('')
 
   const handleSubmit = async (e: FormEvent) => {
@@ -15,8 +22,14 @@ const BuyTicket: React.FC<{ event: EventStruct }> = ({ event }) => {
 
     await toast.promise(
       new Promise(async (resolve, reject) => {
-        console.log(event)
-        resolve(event)
+        buyTicket(event, Number(tickets))
+          .then((tx) => {
+            dispatch(setTicketModal('scale-0'))
+            setTickets('')
+            console.log(tx)
+            resolve(tx)
+          })
+          .catch((error) => reject(error))
       }),
       {
         pending: 'Approve transaction...',
@@ -37,6 +50,7 @@ const BuyTicket: React.FC<{ event: EventStruct }> = ({ event }) => {
             <p className="font-semibold">Buy Tickets</p>
             <button
               className="border-0 bg-transparent focus:outline-none"
+              onClick={() => dispatch(setTicketModal('scale-0'))}
             >
               <FaTimes />
             </button>
