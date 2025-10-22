@@ -47,7 +47,7 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
   mapping(uint256 => TicketStruct[]) tickets;
   mapping(uint256 => bool) eventExists;
 
-  constructor(uint256 _pct) ERC721('Event X', 'EVX') {
+  constructor(uint256 _pct) ERC721('Event X', 'ETX') {
     servicePct = _pct;
   }
 
@@ -97,47 +97,44 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
     uint256 endsAt
   ) public {
     require(eventExists[eventId], 'Event not found');
-    require(events[eventId].owner == msg.sender, 'Unauthorized entity');
+    require(events[eventId].owner == msg.sender, 'Unauthroized entity');
     require(ticketCost > 0 ether, 'TicketCost must be greater than zero');
-    require(capacity > 0, 'capacity must be greater than zero');
+    require(capacity > 0, 'Capacity must be greater than zero');
     require(bytes(title).length > 0, 'Title cannot be empty');
     require(bytes(description).length > 0, 'Description cannot be empty');
     require(bytes(imageUrl).length > 0, 'ImageUrl cannot be empty');
     require(startsAt > 0, 'Start date must be greater than zero');
     require(endsAt > startsAt, 'End date must be greater than start date');
 
-    events[eventId].title = title;
-    events[eventId].description = description;
-    events[eventId].imageUrl = imageUrl;
-    events[eventId].capacity = capacity;
-    events[eventId].ticketCost = ticketCost;
-    events[eventId].startsAt = startsAt;
-    events[eventId].endsAt = endsAt;
+    EventStruct memory eventX = events[eventId];
+    eventX.title = title;
+    eventX.description = description;
+    eventX.imageUrl = imageUrl;
+    eventX.capacity = capacity;
+    eventX.ticketCost = ticketCost;
+    eventX.startsAt = startsAt;
+    eventX.endsAt = endsAt;
+    events[eventX.id] = eventX;
   }
 
-  function deleteEvent(uint256 eventId) public {
+  function deleteEvent(uint256 eventId) public nonReentrant {
     require(eventExists[eventId], 'Event not found');
-    require(events[eventId].owner == msg.sender || msg.sender == owner(), 'Unauthorized entity');
+    require(events[eventId].owner == msg.sender || msg.sender == owner(), 'Unauthroized entity');
     require(!events[eventId].paidOut, 'Event already paid out');
     require(!events[eventId].refunded, 'Event already refunded');
-    require(!events[eventId].deleted, 'Event already deleted');
-    require(refundTickets(eventId), 'Event failed to refund');
-
+    require(refundTickets(eventId), 'Event faild to refund');
     events[eventId].deleted = true;
   }
 
   function getEvents() public view returns (EventStruct[] memory Events) {
     uint256 available;
-
     for (uint256 i = 1; i <= _totalEvents.current(); i++) {
-      if (!events[i].deleted) {
-        available++;
-      }
+      if (!events[i].deleted) available++;
     }
 
     Events = new EventStruct[](available);
-    uint256 index;
 
+    uint256 index;
     for (uint256 i = 1; i <= _totalEvents.current(); i++) {
       if (!events[i].deleted) {
         Events[index++] = events[i];
@@ -147,16 +144,13 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
 
   function getMyEvents() public view returns (EventStruct[] memory Events) {
     uint256 available;
-
     for (uint256 i = 1; i <= _totalEvents.current(); i++) {
-      if (!events[i].deleted && events[i].owner == msg.sender) {
-        available++;
-      }
+      if (!events[i].deleted && events[i].owner == msg.sender) available++;
     }
 
     Events = new EventStruct[](available);
-    uint256 index;
 
+    uint256 index;
     for (uint256 i = 1; i <= _totalEvents.current(); i++) {
       if (!events[i].deleted && events[i].owner == msg.sender) {
         Events[index++] = events[i];
@@ -170,8 +164,8 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
 
   function buyTickets(uint256 eventId, uint256 numOfticket) public payable {
     require(eventExists[eventId], 'Event not found');
-    require(msg.value >= events[eventId].ticketCost * numOfticket, 'Insufficient amount');
-    require(numOfticket > 0, 'NumOfticket must be greater than zero');
+    require(numOfticket > 0 && numOfticket <= 3, 'NumOfticket must be (1 - 3)');
+    require(msg.value >= numOfticket * events[eventId].ticketCost, 'Insufficient amount');
     require(
       events[eventId].seats + numOfticket <= events[eventId].capacity,
       'Out of seating capacity'
@@ -191,15 +185,15 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
     balance += msg.value;
   }
 
-  function getTickets(uint256 eventId) public view returns (TicketStruct[] memory Tickets) {
+  function getTickets(uint256 eventId) public view returns (TicketStruct[] memory) {
     return tickets[eventId];
   }
 
   function refundTickets(uint256 eventId) internal returns (bool) {
     for (uint i = 0; i < tickets[eventId].length; i++) {
       tickets[eventId][i].refunded = true;
-      payTo(tickets[eventId][i].owner, tickets[eventId][i].ticketCost);
       balance -= tickets[eventId][i].ticketCost;
+      payTo(tickets[eventId][i].owner, tickets[eventId][i].ticketCost);
     }
 
     events[eventId].refunded = true;
@@ -210,14 +204,14 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
     require(eventExists[eventId], 'Event not found');
     require(!events[eventId].paidOut, 'Event already paid out');
     require(currentTime() > events[eventId].endsAt, 'Event still ongoing'); // disable while testing
-    require(events[eventId].owner == msg.sender || msg.sender == owner(), 'Unauthorized entity');
-    require(mintTickets(eventId), 'Event failed to mint');
+    require(events[eventId].owner == msg.sender || msg.sender == owner(), 'Unauthroized entity');
+    require(mintTickets(eventId), "Event failed to mint");
 
     uint256 revenue = events[eventId].ticketCost * events[eventId].seats;
-    uint256 feePct = (revenue * servicePct) / 100;
+    uint256 fee = (revenue * servicePct) / 100;
 
-    payTo(events[eventId].owner, revenue - feePct);
-    payTo(owner(), feePct);
+    payTo(events[eventId].owner, revenue - fee);
+    payTo(owner(), fee);
 
     events[eventId].paidOut = true;
     balance -= revenue;
@@ -234,12 +228,12 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
     return true;
   }
 
+  function currentTime() internal view returns (uint256) {
+    return (block.timestamp * 1000) + 1000;
+  }
+
   function payTo(address to, uint256 amount) internal {
     (bool success, ) = payable(to).call{ value: amount }('');
     require(success);
-  }
-
-  function currentTime() internal view returns (uint256) {
-    return (block.timestamp * 1000) + 1000;
   }
 }

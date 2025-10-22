@@ -30,7 +30,7 @@ const Card: React.FC<{ event: EventStruct }> = ({ event }) => {
           </span>
         ) : (
           <span className="bg-cyan-600 text-white absolute right-3 top-3 rounded-xl px-4">
-            Minted
+            Paid
           </span>
         )}
       </div>
