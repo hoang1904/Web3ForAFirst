@@ -13,9 +13,7 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
 
   struct EventStruct {
     uint256 id;
-    string title;
-    string imageUrl;
-    string description;
+    string metadataURI; // IPFS hash for off-chain data
     address owner;
     uint256 sales;
     uint256 ticketCost;
@@ -47,14 +45,15 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
   mapping(uint256 => TicketStruct[]) tickets;
   mapping(uint256 => bool) eventExists;
 
+  event EventCreated(uint256 indexed eventId, string metadataURI, address indexed owner);
+  event EventUpdated(uint256 indexed eventId, string metadataURI);
+
   constructor(uint256 _pct) ERC721('Event X', 'EVX') {
     servicePct = _pct;
   }
 
   function createEvent(
-    string memory title,
-    string memory description,
-    string memory imageUrl,
+    string memory metadataURI, // IPFS hash (e.g., "ipfs://QmXxx..." or just "QmXxx...")
     uint256 capacity,
     uint256 ticketCost,
     uint256 startsAt,
@@ -62,9 +61,7 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
   ) public {
     require(ticketCost > 0 ether, 'TicketCost must be greater than zero');
     require(capacity > 0, 'Capacity must be greater than zero');
-    require(bytes(title).length > 0, 'Title cannot be empty');
-    require(bytes(description).length > 0, 'Description cannot be empty');
-    require(bytes(imageUrl).length > 0, 'ImageUrl cannot be empty');
+    require(bytes(metadataURI).length > 0, 'Metadata URI cannot be empty');
     require(startsAt > 0, 'Start date must be greater than zero');
     require(endsAt > startsAt, 'End date must be greater than start date');
 
@@ -72,9 +69,7 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
     EventStruct memory eventX;
 
     eventX.id = _totalEvents.current();
-    eventX.title = title;
-    eventX.description = description;
-    eventX.imageUrl = imageUrl;
+    eventX.metadataURI = metadataURI;
     eventX.capacity = capacity;
     eventX.ticketCost = ticketCost;
     eventX.startsAt = startsAt;
@@ -84,13 +79,13 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
 
     eventExists[eventX.id] = true;
     events[eventX.id] = eventX;
+
+    emit EventCreated(eventX.id, metadataURI, msg.sender);
   }
 
   function updateEvent(
     uint256 eventId,
-    string memory title,
-    string memory description,
-    string memory imageUrl,
+    string memory metadataURI,
     uint256 capacity,
     uint256 ticketCost,
     uint256 startsAt,
@@ -99,20 +94,18 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
     require(eventExists[eventId], 'Event not found');
     require(events[eventId].owner == msg.sender, 'Unauthorized entity');
     require(ticketCost > 0 ether, 'TicketCost must be greater than zero');
-    require(capacity > 0, 'capacity must be greater than zero');
-    require(bytes(title).length > 0, 'Title cannot be empty');
-    require(bytes(description).length > 0, 'Description cannot be empty');
-    require(bytes(imageUrl).length > 0, 'ImageUrl cannot be empty');
+    require(capacity > 0, 'Capacity must be greater than zero');
+    require(bytes(metadataURI).length > 0, 'Metadata URI cannot be empty');
     require(startsAt > 0, 'Start date must be greater than zero');
     require(endsAt > startsAt, 'End date must be greater than start date');
 
-    events[eventId].title = title;
-    events[eventId].description = description;
-    events[eventId].imageUrl = imageUrl;
+    events[eventId].metadataURI = metadataURI;
     events[eventId].capacity = capacity;
     events[eventId].ticketCost = ticketCost;
     events[eventId].startsAt = startsAt;
     events[eventId].endsAt = endsAt;
+
+    emit EventUpdated(eventId, metadataURI);
   }
 
   function deleteEvent(uint256 eventId) public {
@@ -209,7 +202,7 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
   function payout(uint256 eventId) public {
     require(eventExists[eventId], 'Event not found');
     require(!events[eventId].paidOut, 'Event already paid out');
-    require(currentTime() > events[eventId].endsAt, 'Event still ongoing'); // disable while testing
+    require(currentTime() > events[eventId].endsAt, 'Event still ongoing');
     require(events[eventId].owner == msg.sender || msg.sender == owner(), 'Unauthorized entity');
     require(mintTickets(eventId), 'Event failed to mint');
 

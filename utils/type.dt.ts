@@ -21,6 +21,7 @@ export interface EventStruct {
   title: string
   imageUrl: string
   description: string
+  metadataURI?: string
   owner: string
   sales: number
   ticketCost: number
@@ -53,4 +54,20 @@ export interface GlobalState {
 
 export interface RootState {
   globalStates: GlobalState
+}
+
+export interface IPFSMetadata {
+  title: string
+  description: string
+  imageUrl: string
+  attributes?: Array<{
+    trait_type: string
+    value: string | number
+  }>
+}
+
+export interface PinataResponse {
+  IpfsHash: string
+  PinSize: number
+  Timestamp: string
 }

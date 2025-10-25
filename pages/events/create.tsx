@@ -17,6 +17,8 @@ const Page: NextPage = () => {
     startsAt: '',
     endsAt: '',
   })
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string>('')
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -26,16 +28,46 @@ const Page: NextPage = () => {
     }))
   }
 
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file')
+        return
+      }
+
+      // Validate file size (e.g., max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size should be less than 5MB')
+        return
+      }
+
+      setImageFile(file)
+
+      // Create preview URL
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!address) return toast.warn('Connect wallet first')
+
+    if (!imageFile) {
+      return toast.warn('Please upload an event image')
+    }
 
     event.startsAt = new Date(event.startsAt).getTime()
     event.endsAt = new Date(event.endsAt).getTime()
 
     await toast.promise(
       new Promise(async (resolve, reject) => {
-        createEvent(event)
+        createEvent(event, imageFile)
           .then((tx) => {
             console.log(tx)
             resetForm()
@@ -61,6 +93,8 @@ const Page: NextPage = () => {
       startsAt: '',
       endsAt: '',
     })
+    setImageFile(null)
+    setImagePreview('')
   }
 
   return (
@@ -76,10 +110,14 @@ const Page: NextPage = () => {
             <p className="font-semibold">Create Event</p>
           </div>
 
-          {event.imageUrl && (
-            <div className="flex flex-row justify-center items-center rounded-xl">
-              <div className="shrink-0 rounded-xl overflow-hidden h-20 w-20 shadow-md">
-                <img src={event.imageUrl} alt={event.title} className="h-full object-cover" />
+          {imagePreview && (
+            <div className="flex flex-row justify-center items-center rounded-xl mb-5">
+              <div className="shrink-0 rounded-xl overflow-hidden h-40 w-40 shadow-md">
+                <img
+                  src={imagePreview}
+                  alt="Event preview"
+                  className="h-full w-full object-cover"
+                />
               </div>
             </div>
           )}
@@ -92,6 +130,7 @@ const Page: NextPage = () => {
               placeholder="Title"
               value={event.title}
               onChange={handleChange}
+              required
             />
           </div>
 
@@ -128,8 +167,8 @@ const Page: NextPage = () => {
                   className="block w-full text-sm bg-transparent
                   border-0 focus:outline-none focus:ring-0"
                   type="number"
-                  step="0.01"
-                  min="0.01"
+                  step="0.001"
+                  min="0.001"
                   name="ticketCost"
                   placeholder="Ticket cost (ETH)"
                   value={event.ticketCost}
@@ -143,12 +182,9 @@ const Page: NextPage = () => {
           <div className="flex flex-row justify-between items-center bg-gray-200 rounded-xl mt-5 p-2">
             <input
               className="block w-full text-sm bg-transparent border-0 focus:outline-none focus:ring-0"
-              type="url"
-              name="imageUrl"
-              placeholder="ImageURL"
-              pattern="https?://.+(\.(jpg|png|gif))?$"
-              value={event.imageUrl}
-              onChange={handleChange}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
               required
             />
           </div>
