@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { Providers } from '@/services/provider'
 import type { AppProps } from 'next/app'
 import Header from '@/components/Header'
+import Footer from '@/components/Footer'
 import { Provider } from 'react-redux'
 import { store } from '@/store'
 
@@ -22,11 +23,13 @@ export default function App({ Component, pageProps }: AppProps) {
     return (
       <Providers pageProps={pageProps}>
         <Provider store={store}>
-          <div className="min-h-screen bg-gray-100">
+          <div className="min-h-screen bg-gray-100 flex flex-col">
             <Header />
-            <div className="mt-10 h-20 "></div>
-            <Component {...pageProps} />
-            <div className="mt-10 h-20 "></div>
+            <div className="mt-10 h-20"></div>
+            <main className="flex-grow">
+              <Component {...pageProps} />
+            </main>
+            <Footer />
 
             <ToastContainer
               position="bottom-center"

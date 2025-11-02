@@ -49,6 +49,7 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
   event EventUpdated(uint256 indexed eventId, string metadataURI);
 
   constructor(uint256 _pct) ERC721('Event X', 'EVX') {
+    // require(_pct > 0 && _pct <= 100, "Service percentage must be between 1 and 100");
     servicePct = _pct;
   }
 
@@ -114,9 +115,15 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
     require(!events[eventId].paidOut, 'Event already paid out');
     require(!events[eventId].refunded, 'Event already refunded');
     require(!events[eventId].deleted, 'Event already deleted');
-    require(refundTickets(eventId), 'Event failed to refund');
+    
+    // Check if there are tickets to refund
+    if (events[eventId].seats > 0) {
+      require(balance >= events[eventId].ticketCost * events[eventId].seats, 'Insufficient balance for refund');
+      require(refundTickets(eventId), 'Event failed to refund');
+    }
 
     events[eventId].deleted = true;
+    emit EventUpdated(eventId, events[eventId].metadataURI);
   }
 
   function getEvents() public view returns (EventStruct[] memory Events) {
@@ -189,10 +196,17 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
   }
 
   function refundTickets(uint256 eventId) internal returns (bool) {
+    require(eventExists[eventId], 'Event not found');
+    require(!events[eventId].refunded, 'Event already refunded');
+    require(balance >= events[eventId].ticketCost * events[eventId].seats, 'Insufficient balance for refund');
+
+    uint256 refundAmount = events[eventId].ticketCost;
+    
     for (uint i = 0; i < tickets[eventId].length; i++) {
+      require(!tickets[eventId][i].refunded, 'Ticket already refunded');
       tickets[eventId][i].refunded = true;
-      payTo(tickets[eventId][i].owner, tickets[eventId][i].ticketCost);
-      balance -= tickets[eventId][i].ticketCost;
+      payTo(tickets[eventId][i].owner, refundAmount);
+      balance -= refundAmount;
     }
 
     events[eventId].refunded = true;

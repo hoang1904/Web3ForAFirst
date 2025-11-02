@@ -23,10 +23,36 @@ const BuyTicket: React.FC<{ event: EventStruct }> = ({ event }) => {
     await toast.promise(
       new Promise(async (resolve, reject) => {
         buyTicket(event, Number(tickets))
-          .then((tx) => {
+          .then(async (tx) => {
             dispatch(setTicketModal('scale-0'))
             setTickets('')
             console.log(tx)
+
+            // Get current number of seats as base for ticketId
+            const baseTicketNumber = event.seats - Number(tickets)
+            
+            // Create QR code for each ticket purchased
+            for (let i = 0; i < Number(tickets); i++) {
+              const ticketId = `${event.id}_${baseTicketNumber + i}`
+              try {
+                const res = await fetch(`/api/tickets/${ticketId}/qr?` + new URLSearchParams({
+                  owner: address,
+                  eventId: event.id.toString(),
+                  ticketCost: event.ticketCost.toString(),
+                  timestamp: Date.now().toString()
+                }))
+                if (!res.ok) {
+                  const error = await res.json()
+                  throw new Error(error.message || 'Failed to create ticket QR code')
+                }
+                const data = await res.json()
+                console.log('Ticket created:', data)
+              } catch (err) {
+                console.error('Error creating ticket:', err)
+                toast.error('Failed to create ticket QR code')
+              }
+            }
+
             resolve(tx)
           })
           .catch((error) => reject(error))

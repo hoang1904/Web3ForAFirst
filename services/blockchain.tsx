@@ -11,8 +11,11 @@ const fromWei = (num: number) => ethers.formatEther(num)
 // IPFS Configuration
 // const PINATA_API_KEY = process.env.NEXT_PUBLIC_PINATA_API_KEY
 // const PINATA_SECRET_KEY = process.env.NEXT_PUBLIC_PINATA_SECRET_KEY
-const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT
-const IPFS_GATEWAY = process.env.NEXT_PUBLIC_IPFS_GATEWAY || 'https://gateway.pinata.cloud/ipfs/'
+const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI3YzJlM2ViYS0wZTA1LTRjMmMtOTVjMy1hOTNiMDEyNWRhMjYiLCJlbWFpbCI6ImtpZXRuZ3V5ZW41NjQwNDJAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjAwZGEwNGNiZGE0OGFiN2UwY2Q5Iiwic2NvcGVkS2V5U2VjcmV0IjoiM2M0Y2QyN2Y0YzYxNzkwZGMzODBmNDk1NjRiY2IwN2NlZDBlZmRlZWIxY2VjZmIwZjQwZTdlMTllNWZiOTMyZCIsImV4cCI6MTc5MzEwOTgwNX0.IeJA0qLtscRYJozwRURzXSVuo--DcD_sJdnIBhBh-yc"
+const IPFS_GATEWAY = process.env.NEXT_PUBLIC_IPFS_GATEWAY || 'https://pink-cautious-felidae-745.mypinata.cloud/' //do not push this
+console.log("PINATA_JWT", PINATA_JWT);
+console.log("IPFS_GATEWAY", IPFS_GATEWAY);
+// console.log("IPFS_GATEWAY", process.env.IPFS_GATEWAY);
 
 let ethereum: any
 let tx: any
@@ -108,9 +111,11 @@ const fetchFromIPFS = async (ipfsHash: string): Promise<any> => {
   try {
     // Remove 'ipfs://' prefix if present
     const hash = ipfsHash.replace('ipfs://', '')
-    const url = `${IPFS_GATEWAY}${hash}`
+    const url = `${IPFS_GATEWAY}ipfs/${hash}`
 
     const response = await fetch(url)
+    console.log({response});
+    
     if (!response.ok) {
       throw new Error('Failed to fetch from IPFS')
     }
@@ -217,6 +222,14 @@ const deleteEvent = async (eventId: number): Promise<void> => {
     tx = await contract.deleteEvent(eventId)
     await tx.wait()
 
+    // After successful on-chain deletion, remove tickets from our MongoDB
+    try {
+      // call our internal API to delete tickets for this event
+      await fetch(`/api/events/${eventId}/delete-tickets`, { method: 'POST' })
+    } catch (err) {
+      console.error('Failed to delete tickets from DB after on-chain delete:', err)
+    }
+
     return Promise.resolve(tx)
   } catch (error) {
     reportError(error)
@@ -253,7 +266,10 @@ const buyTicket = async (event: EventStruct, tickets: number): Promise<void> => 
 
   try {
     const contract = await getEthereumContracts()
-    tx = await contract.buyTickets(event.id, tickets, { value: toWei(tickets * event.ticketCost) })
+    // Calculate total cost in wei to avoid floating point precision issues
+    const ticketCostInWei = toWei(event.ticketCost)
+    const totalCostInWei = ticketCostInWei * BigInt(tickets)
+    tx = await contract.buyTickets(event.id, tickets, { value: totalCostInWei })
     await tx.wait()
 
     const eventData: EventStruct = await getEvent(event.id)
@@ -302,7 +318,8 @@ const structuredEvent = async (events: EventStruct[]): Promise<EventStruct[]> =>
         description: 'No description available',
         imageUrl: '',
       }
-
+      console.log({event});
+      
       // Fetch metadata from IPFS if metadataURI exists
       if (event.metadataURI) {
         try {
@@ -311,11 +328,12 @@ const structuredEvent = async (events: EventStruct[]): Promise<EventStruct[]> =>
           console.error(`Error fetching metadata for event ${event.id}:`, error)
         }
       }
-
+      console.log({metadata});
+      let imageUrl = metadata.imageUrl.replace('ipfs://', '');
       return {
         id: Number(event.id),
         title: metadata.title,
-        imageUrl: metadata.imageUrl,
+        imageUrl: `${IPFS_GATEWAY}ipfs/${imageUrl}`,
         description: metadata.description,
         metadataURI: event.metadataURI,
         owner: event.owner,

@@ -6,13 +6,41 @@ async function deployContract() {
   const servicePct = 5
 
   try {
+    console.log('Deploying DappEventX with servicePct=', servicePct)
     contract = await ethers.deployContract('DappEventX', [servicePct])
+
+    // ethers v6: contract.deploymentTransaction or contract.target
+    if (contract.deploymentTransaction) {
+      console.log('Deployment transaction hash:', contract.deploymentTransaction.hash)
+    }
+
+    // Wait for deployment to be mined
     await contract.waitForDeployment()
 
-    console.log('Contracts deployed successfully.')
+    console.log('Contracts deployed successfully at', contract.target || contract.address)
     return contract
   } catch (error) {
-    console.error('Error deploying contracts:', error)
+    console.error('Error deploying contracts:')
+    // Print full error for debugging
+    try {
+      console.dir(error, { depth: null })
+    } catch (e) {
+      console.error(error)
+    }
+
+    // If the error contains a transaction hash, fetch the receipt
+    try {
+      const provider = ethers.provider
+      const txHash = error?.transactionHash || error?.transaction?.hash || (error?.receipt && error.receipt.transactionHash)
+      if (txHash && provider) {
+        console.log('Fetching receipt for tx:', txHash)
+        const receipt = await provider.getTransactionReceipt(txHash)
+        console.log('Receipt:', receipt)
+      }
+    } catch (e) {
+      console.error('Failed to fetch transaction receipt:', e)
+    }
+
     throw error
   }
 }
