@@ -365,6 +365,8 @@ const structuredTicket = (tickets: TicketStruct[]): TicketStruct[] =>
       timestamp: Number(ticket.timestamp),
       refunded: ticket.refunded,
       minted: ticket.minted,
+      checkedIn: ticket.checkedIn,
+      checkedInAt: ticket.checkedInAt,
     }))
     .sort((a, b) => b.timestamp - a.timestamp)
 

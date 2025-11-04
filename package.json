@@ -38,6 +38,7 @@
     "eslint": "8.48.0",
     "eslint-config-next": "13.4.19",
     "ethers": "^6.7.1",
+    "framer-motion": "12.23.24",
     "html5-qrcode": "2.3.8",
     "lokijs": "^1.5.12",
     "moment": "^2.29.4",

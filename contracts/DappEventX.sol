@@ -36,6 +36,8 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
     uint256 timestamp;
     bool refunded;
     bool minted;
+    bool checkedIn;      
+    uint256 checkedInAt;
   }
 
   uint256 public balance;
@@ -143,6 +145,20 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
         Events[index++] = events[i];
       }
     }
+  }
+  function finalizeCheckIns(
+      uint256 eventId,
+      string memory summaryCID
+  ) external {
+      require(eventExists[eventId], "Event not found");
+      require(events[eventId].endsAt < block.timestamp, "Event still ongoing");
+      // có thể chỉ chủ sự kiện hoặc owner gọi
+      require(events[eventId].owner == msg.sender || msg.sender == owner(), "Unauthorized");
+
+      // logic chỉ là ghi lại summaryCID và maybe update event struct
+      events[eventId].metadataURI = summaryCID;  // hoặc dùng 1 trường mới summaryCID
+      // Có thể emit event
+      emit EventUpdated(eventId, summaryCID);
   }
 
   function getMyEvents() public view returns (EventStruct[] memory Events) {

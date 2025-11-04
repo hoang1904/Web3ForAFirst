@@ -8,8 +8,14 @@ const Footer = () => {
           {/* About Section */}
           <div>
             <h3 className="text-xl font-semibold mb-4">About DappEventX</h3>
+            <p className='text-gray-300 mt-2' >
+              Các thành viên nhóm thực hiện đề tài
+            </p>
             <p className="text-gray-300">
-              A decentralized platform for creating, managing, and attending events using blockchain technology.
+              21078771 - Nguyễn Hoàng Kiệt
+            </p>
+            <p className="text-gray-300">
+              21001545 - Đinh Việt Hoàng
             </p>
           </div>
 
@@ -52,7 +58,7 @@ const Footer = () => {
                 <a href="#" className="hover:text-white transition">
                   Discord
                 </a>
-                <a href="#" className="hover:text-white transition">
+                <a href="https://github.com/hoang1904/Web3ForAFirst" className="hover:text-white transition">
                   GitHub
                 </a>
               </div>

@@ -44,6 +44,8 @@ export interface TicketStruct {
   timestamp: number
   refunded: boolean
   minted: boolean
+  checkedIn: boolean
+  checkedInAt: number
 }
 
 export interface GlobalState {
