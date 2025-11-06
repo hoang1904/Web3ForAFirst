@@ -24,7 +24,7 @@ const { chains, publicClient } = configureChains(
   [alchemyProvider({ apiKey: process.env.NEXT_PUBLIC_ALCHEMY_ID as string }), publicProvider()]
 )
 
-const projectId = process.env.ea75ab9834816f6f3384d160199b8bad as string
+const projectId = 'ea75ab9834816f6f3384d160199b8bad' as string
 
 const connectors = connectorsForWallets([
   {
