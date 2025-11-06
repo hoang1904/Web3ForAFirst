@@ -154,10 +154,12 @@ const createEvent = async (event: EventParams, imageFile?: File): Promise<void> 
 
     // Create event on blockchain with IPFS hash
     const contract = await getEthereumContracts()
+    const ticketCostInWei = toWei(Number(event.ticketCost))
+    console.log('Ticket cost in Wei:', ticketCostInWei.toString())
     tx = await contract.createEvent(
       metadataURI,
       event.capacity,
-      toWei(Number(event.ticketCost)),
+      ticketCostInWei,
       event.startsAt,
       event.endsAt
     )
@@ -258,7 +260,7 @@ const payout = async (eventId: number): Promise<void> => {
   }
 }
 
-const buyTicket = async (event: EventStruct, tickets: number): Promise<void> => {
+const buyTicket = async (event: EventStruct, tickets: number,address: `0x${string}` | undefined): Promise<void> => {
   if (!ethereum) {
     reportError('Please install a browser provider')
     return Promise.reject(new Error('Browser provider not installed'))
@@ -266,24 +268,72 @@ const buyTicket = async (event: EventStruct, tickets: number): Promise<void> => 
 
   try {
     const contract = await getEthereumContracts()
-    // Calculate total cost in wei to avoid floating point precision issues
+
     const ticketCostInWei = toWei(event.ticketCost)
     const totalCostInWei = ticketCostInWei * BigInt(tickets)
-    tx = await contract.buyTickets(event.id, tickets, { value: totalCostInWei })
-    await tx.wait()
 
-    const eventData: EventStruct = await getEvent(event.id)
-    store.dispatch(setEvent(eventData))
+    const tx = await contract.buyTickets(event.id, tickets, { value: totalCostInWei })
+    const receipt = await tx.wait()
+    // Parse event logs'
+console.log("🚧 RAW RECEIPT", receipt);
+console.log("🚧 RECEIPT LOGS", receipt.logs);
+const parsedLogs = receipt.logs
+  .map((log: any) => {
+    try {
+      return contract.interface.parseLog(log);
+    } catch {
+      return null;
+    }
+  })
+  .filter((log: any) => log && log.name === "TicketsBought");
 
-    const ticketsData: TicketStruct[] = await getTickets(event.id)
-    store.dispatch(setTickets(ticketsData))
+if (parsedLogs.length > 0) {
+  const ticketsEvent = parsedLogs[0];
+  const ticketIds = ticketsEvent.args.ticketIds.map((id: bigint) => id.toString());
 
-    return Promise.resolve(tx)
+  console.log("🎫 Ticket IDs:", ticketIds);
+
+  await Promise.all(
+    ticketIds.map(async (ticketId: string) => {
+      await createDbTicket(Number(ticketId), event.id, Number(event.ticketCost), address);
+    })
+  );
+} else {
+  console.warn("⚠️ No TicketsBought event found.");
+}
+
+
+    return Promise.resolve()
   } catch (error) {
     reportError(error)
     return Promise.reject(error)
   }
 }
+
+    async function createDbTicket(ticketId: number,eventId: number,eventCost: number,address: `0x${string}` | undefined) {
+       try {
+                const res = await fetch("/api/tickets/create", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    ticketId,
+                    eventId: eventId,
+                    ticketCost: eventCost,
+                    owner: address,
+                  })
+                })
+                if (!res.ok) {
+                  const error = await res.json()
+                  throw new Error(error.message || 'Failed to create ticket QR code')
+                }
+                const data = await res.json()
+                console.log('Ticket created:', data)
+              } catch (err) {
+                console.error('Error creating ticket:', err)
+              }
+    }
 
 const getEvents = async (): Promise<EventStruct[]> => {
   const contract = await getEthereumContracts()
@@ -306,6 +356,11 @@ const getEvent = async (eventId: number): Promise<EventStruct> => {
 const getTickets = async (eventId: number): Promise<TicketStruct[]> => {
   const contract = await getEthereumContracts()
   const tickets = await contract.getTickets(eventId)
+  return structuredTicket(tickets)
+}
+const getMyTicket = async (eventId: number): Promise<TicketStruct[]> => {
+  const contract = await getEthereumContracts()
+  const tickets = await contract.getMyTicket(eventId)
   return structuredTicket(tickets)
 }
 
@@ -366,7 +421,7 @@ const structuredTicket = (tickets: TicketStruct[]): TicketStruct[] =>
       refunded: ticket.refunded,
       minted: ticket.minted,
       checkedIn: ticket.checkedIn,
-      checkedInAt: ticket.checkedInAt,
+      checkedInAt: Number(ticket.checkedInAt),
     }))
     .sort((a, b) => b.timestamp - a.timestamp)
 

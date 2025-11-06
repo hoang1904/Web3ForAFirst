@@ -81,7 +81,8 @@ const Page: NextPage = () => {
             }
           })
         })
-
+        console.log({owned});
+        
         setMyTickets(owned)
       } catch (error) {
         console.error('Error fetching my tickets:', error)
@@ -122,7 +123,7 @@ const Page: NextPage = () => {
 
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold">{t.eventTitle}</h3>
-                      <p className="text-sm text-gray-500">Ticket #{t.id + 1} • Event #{t.eventId}</p>
+                      <p className="text-sm text-gray-500">Ticket #{t.id} • Event #{t.eventId}</p>
                       <p className="text-sm text-gray-500">Creator: {truncate({ text: t.eventOwner || '', startChars: 8, endChars: 6, maxLength: 24 })}</p>
                       {t.eventCreatedAt && (
                         <p className="text-sm text-gray-400">Created: <Moment format="YYYY-MM-DD HH:mm">{t.eventCreatedAt}</Moment></p>
@@ -142,11 +143,14 @@ const Page: NextPage = () => {
                             onClick={async () => {
                               setQrLoading(true)
                               try {
-                                const res = await fetch(`/api/tickets/${t.id}/qr?owner=${encodeURIComponent(t.owner)}`)
+                                const res = await fetch(`/api/tickets/${t.id}/qr`)
                                 const data = await res.json()
+                                console.log({data});
+                                
                                 const payload = { payload: data.payload, sig: data.sig, event: { id: t.eventId, title: t.eventTitle, ticketNumber: t.id + 1 } }
                                 const txt = JSON.stringify(payload)
                                 const b64 = typeof window !== 'undefined' ? window.btoa(unescape(encodeURIComponent(txt))) : Buffer.from(txt).toString('base64')
+                                console.log({txt})
                                 setQrValue(b64)
                                 setQrEventDetails(payload.event)
                                 setQrVisible(true)

@@ -49,6 +49,7 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
 
   event EventCreated(uint256 indexed eventId, string metadataURI, address indexed owner);
   event EventUpdated(uint256 indexed eventId, string metadataURI);
+  event TicketCheckedIn(uint256 indexed eventId, uint256 indexed ticketId, address owner);
 
   constructor(uint256 _pct) ERC721('Event X', 'EVX') {
     // require(_pct > 0 && _pct <= 100, "Service percentage must be between 1 and 100");
@@ -184,27 +185,62 @@ contract DappEventX is Ownable, ReentrancyGuard, ERC721 {
     return events[eventId];
   }
 
-  function buyTickets(uint256 eventId, uint256 numOfticket) public payable {
-    require(eventExists[eventId], 'Event not found');
-    require(msg.value >= events[eventId].ticketCost * numOfticket, 'Insufficient amount');
-    require(numOfticket > 0, 'NumOfticket must be greater than zero');
+  event TicketsBought(address indexed buyer, uint256 indexed eventId, uint256[] ticketIds);
+
+function buyTickets(uint256 eventId, uint256 numOfTicket)
+    public
+    payable
+{
+    require(eventExists[eventId], "Event not found");
+    require(msg.value >= events[eventId].ticketCost * numOfTicket, "Insufficient amount");
+    require(numOfTicket > 0, "NumOfTicket must be greater than zero");
     require(
-      events[eventId].seats + numOfticket <= events[eventId].capacity,
-      'Out of seating capacity'
+        events[eventId].seats + numOfTicket <= events[eventId].capacity,
+        "Out of seating capacity"
     );
 
-    for (uint i = 0; i < numOfticket; i++) {
-      TicketStruct memory ticket;
-      ticket.id = tickets[eventId].length;
-      ticket.eventId = eventId;
-      ticket.owner = msg.sender;
-      ticket.ticketCost = events[eventId].ticketCost;
-      ticket.timestamp = currentTime();
-      tickets[eventId].push(ticket);
+    uint256[] memory newTicketIds = new uint256[](numOfTicket);
+
+    for (uint256 i = 0; i < numOfTicket; i++) {
+        TicketStruct memory ticket;
+        ticket.id = tickets[eventId].length;
+        ticket.eventId = eventId;
+        ticket.owner = msg.sender;
+        ticket.ticketCost = events[eventId].ticketCost;
+        ticket.timestamp = currentTime();
+
+        tickets[eventId].push(ticket);
+        newTicketIds[i] = ticket.id;
     }
 
-    events[eventId].seats += numOfticket;
+    events[eventId].seats += numOfTicket;
     balance += msg.value;
+
+    emit TicketsBought(msg.sender, eventId, newTicketIds);
+}
+
+  function checkIn(uint256 eventId, uint256 ticketId) external {
+      require(eventExists[eventId], "Event not found");
+      // xác minh người gọi có quyền (ví dụ events[eventId].owner hoặc bạn muốn open)
+      TicketStruct storage ticket = tickets[eventId][ticketId];
+      require(!ticket.checkedIn, "Already checked in");
+      ticket.checkedIn = true;
+      ticket.checkedInAt = block.timestamp;
+      emit TicketCheckedIn(eventId, ticketId, ticket.owner);
+  }
+
+  function getTicket(uint256 eventId, uint256 ticketId) public view returns (TicketStruct memory) {
+    require(eventExists[eventId], "Event not found");
+    require(ticketId < tickets[eventId].length, "Invalid ticket ID");
+    return tickets[eventId][ticketId];
+  }
+
+  function getMyTicket(uint256 eventId, uint256 ticketId) public view returns (TicketStruct memory) {
+      require(eventExists[eventId], "Event not found");
+      require(ticketId < tickets[eventId].length, "Invalid ticket ID");
+      TicketStruct memory t = tickets[eventId][ticketId];
+      require(t.owner == msg.sender, "Not your ticket");
+      return t;
   }
 
   function getTickets(uint256 eventId) public view returns (TicketStruct[] memory Tickets) {

@@ -168,7 +168,7 @@ export const getServerSideProps = async (context: GetServerSidePropsContext) => 
   const { id } = context.query
   const eventData: EventStruct = await getEvent(Number(id))
   const ticketsData: TicketStruct[] = await getTickets(Number(id))
-
+  
   return {
     props: {
       eventData: JSON.parse(JSON.stringify(eventData)),

@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "D:\\WEB3\\dappEventYT\\contracts\\DappEventX.sol": {
-      "lastModificationDate": 1762060089182,
-      "contentHash": "23fbe5406f9ddbcad3f1b9abbc5c7e7e",
+      "lastModificationDate": 1762358504867,
+      "contentHash": "e1b7ab0e1e9c7fa3c05c34594e5378ee",
       "sourceName": "contracts/DappEventX.sol",
       "solcConfig": {
         "version": "0.8.17",
