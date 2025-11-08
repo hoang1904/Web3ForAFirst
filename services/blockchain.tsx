@@ -13,8 +13,8 @@ const fromWei = (num: number) => ethers.formatEther(num)
 // const PINATA_SECRET_KEY = process.env.NEXT_PUBLIC_PINATA_SECRET_KEY
 const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI3YzJlM2ViYS0wZTA1LTRjMmMtOTVjMy1hOTNiMDEyNWRhMjYiLCJlbWFpbCI6ImtpZXRuZ3V5ZW41NjQwNDJAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjAwZGEwNGNiZGE0OGFiN2UwY2Q5Iiwic2NvcGVkS2V5U2VjcmV0IjoiM2M0Y2QyN2Y0YzYxNzkwZGMzODBmNDk1NjRiY2IwN2NlZDBlZmRlZWIxY2VjZmIwZjQwZTdlMTllNWZiOTMyZCIsImV4cCI6MTc5MzEwOTgwNX0.IeJA0qLtscRYJozwRURzXSVuo--DcD_sJdnIBhBh-yc"
 const IPFS_GATEWAY = process.env.NEXT_PUBLIC_IPFS_GATEWAY || 'https://pink-cautious-felidae-745.mypinata.cloud/' //do not push this
-console.log("PINATA_JWT", PINATA_JWT);
-console.log("IPFS_GATEWAY", IPFS_GATEWAY);
+// console.log("PINATA_JWT", PINATA_JWT);
+// console.log("IPFS_GATEWAY", IPFS_GATEWAY);
 // console.log("IPFS_GATEWAY", process.env.IPFS_GATEWAY);
 
 let ethereum: any
